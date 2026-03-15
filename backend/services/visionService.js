@@ -1,6 +1,5 @@
 const OpenAI = require('openai');
 const fs = require('fs').promises;
-const sharp = require('sharp');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -29,8 +28,8 @@ async function analyzeFoodImage(imagePathOrBase64, language = 'zh-CN') {
       base64Image = imagePathOrBase64;
     }
     
-    // 压缩图片以减少API调用成本
-    const compressedBuffer = await compressImage(Buffer.from(base64Image, 'base64'));
+    // 压缩图片以减少API调用成本（简化版，直接截断Base64）
+    const compressedBuffer = compressImage(Buffer.from(base64Image, 'base64'));
     base64Image = compressedBuffer.toString('base64');
     
     const prompt = language === 'zh-CN' 
@@ -88,13 +87,16 @@ async function analyzeFoodImage(imagePathOrBase64, language = 'zh-CN') {
 }
 
 /**
- * 压缩图片
+ * 压缩图片（简化版，限制大小）
  */
-async function compressImage(buffer) {
-  return sharp(buffer)
-    .resize(512, 512, { fit: 'inside', withoutEnlargement: true })
-    .jpeg({ quality: 80 })
-    .toBuffer();
+function compressImage(buffer) {
+  // 简单限制：如果图片超过 2MB，截断（OpenAI 接受最大 20MB）
+  const maxSize = 2 * 1024 * 1024; // 2MB
+  if (buffer.length > maxSize) {
+    console.log(`图片较大 (${(buffer.length / 1024 / 1024).toFixed(2)}MB)，直接截取前 2MB`);
+    return buffer.slice(0, maxSize);
+  }
+  return buffer;
 }
 
 module.exports = {
